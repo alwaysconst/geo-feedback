@@ -1,23 +1,11 @@
-//ymaps.ready(init);
-//
-//function init () {
-//    var myMap = new ymaps.Map("map", {
-//            center: [55.76, 37.64],
-//            zoom: 10
-//        }, {
-//            searchControlProvider: 'yandex#search'
-//        }),
-//
-//}
-
 ymaps.ready(init);
 
 function init () {
-    var myMap = new ymaps.Map('map', {
+    var myPlacemark,
+        myMap = new ymaps.Map('map', {
             center: [55.76, 37.64],
-            zoom: 10
-        }, {
-            searchControlProvider: 'yandex#search'
+            zoom: 12,
+            controls: ['smallMapDefaultSet']
         }),
         objectManager = new ymaps.ObjectManager({
             // Чтобы метки начали кластеризоваться, выставляем опцию.
@@ -26,37 +14,48 @@ function init () {
             gridSize: 32
         });
 
-    // Чтобы задать опции одиночным объектам и кластерам,
-    // обратимся к дочерним коллекциям ObjectManager.
-    objectManager.objects.options.set('preset', 'islands#greenDotIcon');
-    objectManager.clusters.options.set('preset', 'islands#greenClusterIcons');
-    myMap.geoObjects.add(objectManager);
+        // Слушаем клик на карте
+    myMap.events.add('click', function (e) {
+        var coords = e.get('coords');
 
-    $.ajax({
-        url: "data.json"
-    }).done(function(data) {
-        objectManager.add(data);
+        // Если метка уже создана – просто передвигаем ее
+        if (myPlacemark) {
+            myPlacemark.geometry.setCoordinates(coords);
+        }
+        // Если нет – создаем.
+        else {
+            myPlacemark = createPlacemark(coords);
+            myMap.geoObjects.add(myPlacemark);
+            // Слушаем событие окончания перетаскивания на метке.
+            myPlacemark.events.add('dragend', function () {
+                getAddress(myPlacemark.geometry.getCoordinates());
+            });
+        }
+        getAddress(coords);
     });
 
-    // Создаем геообъект с типом геометрии "Точка".
-        myGeoObject = new ymaps.GeoObject({
-            // Описание геометрии.
-            geometry: {
-                type: "Point",
-                coordinates: [55.8, 37.8]
-            },
-            // Свойства.
-            properties: {
-                // Контент метки.
-                iconContent: 'Я тащусь',
-                hintContent: 'Ну давай уже тащи'
-            }
+    // Создание метки
+    function createPlacemark(coords) {
+        return new ymaps.Placemark(coords, {
+            iconContent: 'поиск...'
         }, {
-            // Опции.
-            // Иконка метки будет растягиваться под размер ее содержимого.
-            preset: 'islands#blackStretchyIcon',
-            // Метку можно перемещать.
-            draggable: true
+            preset: 'islands#pinkStretchyIcon',
+            draggable: false
         });
+    }
+
+    // Определяем адрес по координатам (обратное геокодирование)
+    function getAddress(coords) {
+        myPlacemark.properties.set('iconContent', 'поиск...');
+        ymaps.geocode(coords).then(function (res) {
+            var firstGeoObject = res.geoObjects.get(0);
+
+            myPlacemark.properties
+                .set({
+                    iconContent: firstGeoObject.properties.get('name'),
+                    balloonContent: firstGeoObject.properties.get('text')
+                });
+        });
+    }
 
 }
