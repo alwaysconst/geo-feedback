@@ -1,62 +1,90 @@
-//ymaps.ready(init);
-//
-//function init () {
-//    var myMap = new ymaps.Map("map", {
-//            center: [55.76, 37.64],
-//            zoom: 10
-//        }, {
-//            searchControlProvider: 'yandex#search'
-//        }),
-//
-//}
 
-ymaps.ready(init);
-
-function init () {
-    var myMap = new ymaps.Map('map', {
-            center: [55.76, 37.64],
-            zoom: 10
+ymaps.ready(function () {
+    var myPlacemark,
+        myMap = new ymaps.Map('map', {
+            center: [55.755381, 37.619044],
+            zoom: 12,
+            behaviors: ['default', 'scrollZoom'],
+            controls: ['smallMapDefaultSet']
         }, {
             searchControlProvider: 'yandex#search'
-        }),
-        objectManager = new ymaps.ObjectManager({
-            // Чтобы метки начали кластеризоваться, выставляем опцию.
-            clusterize: true,
-            // ObjectManager принимает те же опции, что и кластеризатор.
-            gridSize: 32
         });
+    // Создаем собственный макет с информацией о выбранном геообъекте.
+    var customItemContentLayout = ymaps.templateLayoutFactory.createClass(
+        // Флаг "raw" означает, что данные вставляют "как есть" без экранирования html.
+            '<h2 class=ballon_header>{{ properties.balloonContentHeader|raw }}</h2>' +
+            '<div class=ballon_body>{{ properties.balloonContentBody|raw }}</div>' +
+            '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
+    );
 
-    // Чтобы задать опции одиночным объектам и кластерам,
-    // обратимся к дочерним коллекциям ObjectManager.
-    objectManager.objects.options.set('preset', 'islands#greenDotIcon');
-    objectManager.clusters.options.set('preset', 'islands#greenClusterIcons');
-    myMap.geoObjects.add(objectManager);
+    var clusterer = new ymaps.Clusterer({
+        clusterDisableClickZoom: true,
+        clusterOpenBalloonOnClick: true,
+        // Устанавливаем стандартный макет балуна кластера "Карусель".
+        clusterBalloonContentLayout: 'cluster#balloonCarousel',
+        // Устанавливаем собственный макет.
+        clusterBalloonItemContentLayout: customItemContentLayout,
+        // Устанавливаем режим открытия балуна. 
+        // В данном примере балун никогда не будет открываться в режиме панели.
+        clusterBalloonPanelMaxMapArea: 0,
+        // Устанавливаем размеры макета контента балуна (в пикселях).
+        clusterBalloonContentLayoutWidth: 200,
+        clusterBalloonContentLayoutHeight: 130,
+        // Устанавливаем максимальное количество элементов в нижней панели на одной странице
+        clusterBalloonPagerSize: 5
+        // Настройка внешего вида нижней панели.
+        // Режим marker рекомендуется использовать с небольшим количеством элементов.
+        // clusterBalloonPagerType: 'marker',
+        // Можно отключить зацикливание списка при навигации при помощи боковых стрелок.
+        // clusterBalloonCycling: false,
+        // Можно отключить отображение меню навигации.
+        // clusterBalloonPagerVisible: false
+    });
+//            // Устаналиваем данные, которые будут отображаться в балуне.
+//            balloonContentHeader: 'Метка №' + (i + 1),
+//            balloonContentBody: getContentBody(i),
+//            balloonContentFooter: 'Мацуо Басё'
+//        });
 
-    $.ajax({
-        url: "data.json"
-    }).done(function(data) {
-        objectManager.add(data);
+
+// Слушаем клик на карте
+    myMap.events.add('click', function (e) {
+        var coords = e.get('coords');
+
+        // Если метка уже создана – просто передвигаем ее
+        if (myPlacemark) {
+            myPlacemark.geometry.setCoordinates(coords);
+        }
+        // Если нет – создаем.
+        else {
+            myPlacemark = createPlacemark(coords);
+            myMap.geoObjects.add(myPlacemark);
+            // Слушаем событие окончания перетаскивания на метке.
+            myPlacemark.events.add('dragend', function () {
+                getAddress(myPlacemark.geometry.getCoordinates());
+            });
+        }
+        getAddress(coords);
     });
 
-    // Создаем геообъект с типом геометрии "Точка".
-        myGeoObject = new ymaps.GeoObject({
-            // Описание геометрии.
-            geometry: {
-                type: "Point",
-                coordinates: [55.8, 37.8]
-            },
-            // Свойства.
-            properties: {
-                // Контент метки.
-                iconContent: 'Я тащусь',
-                hintContent: 'Ну давай уже тащи'
-            }
+    // Создание метки
+    function createPlacemark(coords) {
+        return new ymaps.Placemark(coords, {
+            iconContent: 'поиск...'
         }, {
-            // Опции.
-            // Иконка метки будет растягиваться под размер ее содержимого.
-            preset: 'islands#blackStretchyIcon',
-            // Метку можно перемещать.
-            draggable: true
+            preset: 'islands#violetStretchyIcon',
         });
+    }
 
-}
+    // Определяем адрес по координатам (обратное геокодирование)
+    function getAddress(coords) {
+        myPlacemark.properties.set('iconContent', 'поиск...');
+        ymaps.geocode(coords).then(function (res) {
+            var firstGeoObject = res.geoObjects.get(0);
+                myPlacemark.properties.set({
+                    iconContent: firstGeoObject.properties.get('name'),
+                    balloonContent: firstGeoObject.properties.get('text')
+                });
+        });
+    }
+});

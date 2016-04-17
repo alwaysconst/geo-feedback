@@ -64,7 +64,7 @@ var assert = require('assert'),
         });
     });
 
-server.listen(3000, 'localhost');
+server.listen(3000, 'localhost', () => console.log("Ok, i'm ready!"));
 
 function parsePost(req) {
     return new Promise(function(resolve) {
