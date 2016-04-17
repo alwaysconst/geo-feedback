@@ -16,7 +16,6 @@ ymaps.ready(function () {
             '<div class=ballon_body>{{ properties.balloonContentBody|raw }}</div>' +
             '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
     );
-
     var clusterer = new ymaps.Clusterer({
         clusterDisableClickZoom: true,
         clusterOpenBalloonOnClick: true,
