@@ -4,31 +4,50 @@
     <meta charset="UTF-8">
     <title> Сервис гео отзывов</title>
     <link rel="stylesheet" href=css/main.css>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no, maximum-scale=1" /> 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>-->
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
-    <script src="http://yandex.st/jquery/2.1.0/jquery.min.js" type="text/javascript"></script>
+<!--    <script src="http://yandex.st/jquery/2.1.0/jquery.min.js" type="text/javascript"></script>-->
 </head>
 <body>
-    <div class="form">
-        <div class="form-header">
-            
+    <div id="map"></div>
+    
+    <div class="review hide">
+        <div class="review-header">
+            <i class="fa fa-map-marker fa-lg" aria-hidden="true"></i> Адрес на карте <span class="close pull-right"><i class="fa fa-times fa-lg"></i></span>
         </div>
-        <div class="form-rewiews">
-            
+        <div class="review-rewiews">
+            <ul class="review-rewiews__list" id="rewiewsList">
+                <li class="list-item">
+                    <strong>Имя</strong> Место Дата
+                    <div class="list-item__description">Описание места</div>
+                </li>
+                <li class="list-item">
+                    <strong>Имя</strong> Место Дата
+                    <div class="list-item__description">Описание места</div>
+                </li>
+                <li class="list-item">
+                    <strong>Имя</strong> Место Дата
+                    <div class="list-item__description">Описание места</div>
+                </li>
+                <li class="list-item">
+                    <strong>Имя</strong> Место Дата
+                    <div class="list-item__description">Описание места</div>
+                </li>
+            </ul>
         </div>
-        <div class="form-content">
+        <form class="review-content">
             <span>ВАШ ОТЗЫВ</span>
-            <input type="text" id="name" placeholder="Ваше имя">
-            <input type="text" id="place" placeholder="Укажите место">
-            <textarea id="comment" placeholder="Поделитесь впечатлениями"></textarea>
-        </div>
-        <div class="form-footer">
+            <input type="text" id="name"  name="name" placeholder="Ваше имя">
+            <input type="text" id="place" name="place" placeholder="Укажите место">
+            <textarea id="comment" name="comment" placeholder="Поделитесь впечатлениями"></textarea>
+        </form>
+        <div class="review-footer">
             <button id="button-save">Добавить</button>
         </div>
     </div>
     
-    <div id="map" class="wrapper"></div>
     <script src="js/main.js"></script>
 </body>
 </html>
