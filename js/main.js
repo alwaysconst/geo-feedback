@@ -10,7 +10,20 @@ ymaps.ready(function () {
             searchControlProvider: 'yandex#search'
         });
 
+    
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = 'json';
+        xhr.open('post', 'http://localhost:3000/', true)
+        xhr.onload = function() {
+            for (var address in xhr.response) {
+                var reviews = xhr.response[address];
 
+                reviews.forEach(function(review) {
+                    placeMarkToMap([review.coords.x, review.coords.y], address, review.name, review.place, review.text)
+                });
+            }
+        };
+        xhr.send(JSON.stringify({op: 'all'}));
 
         // Создаем собственный макет с информацией о выбранном геообъекте.
         customItemContentLayout = ymaps.templateLayoutFactory.createClass(
@@ -46,8 +59,8 @@ ymaps.ready(function () {
 
             getPointData = function (index) {
             return {
-                balloonContentBody: 'балун <strong>метки ' + index + '</strong>',
-                clusterCaption: 'метка <strong>' + index + '</strong>'
+                balloonContentBody: 'балунsafa <strong>метки ' + index + '</strong>',
+                clusterCaption: 'меткаasdasd <strong>' + index + '</strong>'
             };
         },
 
@@ -97,20 +110,32 @@ ymaps.ready(function () {
 // Слушаем клик на карте
     myMap.events.add('click', function (e) {
         var coords = e.get('coords');
-        getAddress(coords).then(function(gotAdress) {
-            console.log(gotAdress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAdress.properties.get('name'))
+        getAddress(coords).then(function(gotAddress) {
+            console.log(gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name'))
             
-            var name = prompt ('Имя'),
+            var address = gotAddress.properties.get('text')
+                name = prompt ('Имя'),
                 place = prompt ('Место'),
                 text = prompt ('Комментарий')
+                
+            placeMarkToMap (coords, address, name, place, text)
             
-                myPlacemark = createPlacemark(coords);
-                myPlacemark.properties.set({
-                    balloonContentHeader: place,
-                    balloonContentBody: text,
-                    balloonContentFooter: name
-                });
-                clusterer.add(myPlacemark);
+            var xhr = new XMLHttpRequest();
+            xhr.open('post', 'http://localhost:3000/', true)
+            xhr.send(JSON.stringify({
+            op: 'add',
+            review: {
+                coords: {
+                    x: coords[0],
+                    y: coords[1]
+                },
+                address: address,
+                name: name,
+                place: place,
+                text: text,
+                date: "2016.04.09 22:32:00"
+            }
+            }))
         })
         
     });
@@ -118,9 +143,7 @@ ymaps.ready(function () {
     // Создание метки
     function createPlacemark(coords) {
         return new ymaps.Placemark(coords, {
-            iconContent: 'поиск...'
-        }, {
-            preset: 'islands#violetStretchyIcon',
+            preset: 'islands#violetStretchyIcon'
         });
     }
 
@@ -130,5 +153,15 @@ ymaps.ready(function () {
             return res.geoObjects.get(0);
 
         });
+    }
+        
+    function placeMarkToMap (coords, address, name, place, text) {
+        myPlacemark = createPlacemark(coords);
+        myPlacemark.properties.set({
+            balloonContentHeader: place,
+            balloonContentBody: text,
+            balloonContentFooter: name
+        });
+        clusterer.add(myPlacemark);
     }
 });
