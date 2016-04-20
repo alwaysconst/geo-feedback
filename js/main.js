@@ -80,58 +80,77 @@ ymaps.ready(function () {
 
 // Слушаем клик на карте
     myMap.events.add('click', function (e) {
-        var coords = e.get('coords');
-            click = e.get('pagePixels')
+        var clickCoords = e.get('coords');
+            click = e.get('pagePixels'),
             review = document.querySelector('.review')
-            
+        
             review.style.left = click[0] + 'px';
             review.style.top  = click[1] + 'px';
             review.classList.remove('hide');
         
-        getAddress(coords).then(function(gotAddress) {
-            
-            var address = gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name')
-            
-            
-                name = document.getElementById('name').value,
-                place = document.getElementById('place').value,
-                text = document.getElementById('text').value
-            
-            document.querySelector('.address').innerText = address;
-            
-                console.log(e.get('coords'));
+        getAddress(clickCoords).then(function(gotAddress) {
+            address = gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name')
+//        }).then(function (adress) {
+                // Поиск координат центра Нижнего Новгорода.
+            ymaps.geocode(address, {
+                // Сортировка результатов от центра окна карты.
+                results: 1
+            }).then(function (res) {
+                    // Выбираем первый результат геокодирования.
+                    var firstGeoObject = res.geoObjects.get(0),
+                        // Область видимости геообъекта.
+                        bounds = firstGeoObject.properties.get('boundedBy');
+                        // Координаты геообъекта.
+                    return coords = firstGeoObject.geometry.getCoordinates();
+                    
+            });
             
             document.querySelector('#button-save').addEventListener('click', function (){
-        
-                var xhr = new XMLHttpRequest();
-                xhr.open('post', 'http://localhost:3000/', true)
-                xhr.send(JSON.stringify({
-                op: 'add',
-                review: {
-                    coords: {
-                        x: coords[0],
-                        y: coords[1]
-                    },
-                    address: address,
-                    name: name,
-                    place: place,
-                    text: text,
-                    date: "Date"
-                }
-                }))
-                
-                placeMarkToMap (coords, address, name, place, text)
-
-                document.querySelector('.review').classList.add('hide');
-        })
-
-            })
-            document.querySelector('.close').addEventListener('click', function (e){
-                document.querySelector('.review').classList.add('hide');
-
+                sendReview (coords, address)
             });
-          
+            
+            document.querySelector('.close').addEventListener('click', function (e){
+                    document.querySelector('.review').classList.add('hide');
+            });
+            
+            console.log(coords.length)
+        });
     });
+
+    function sendReview (coords, address) {
+            console.log(address)
+            console.log(coords)
+            
+        name = document.getElementById('name').value,
+        place = document.getElementById('place').value,
+        text = document.getElementById('text').value
+
+        document.querySelector('.address').innerText = address;
+
+
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('post', 'http://localhost:3000/', true)
+            xhr.send(JSON.stringify({
+            op: 'add',
+            review: {
+                coords: {
+                    x: coords[0],
+                    y: coords[1]
+                },
+                address: address,
+                name: name,
+                place: place,
+                text: text,
+                date: "Date"
+            }
+            }))
+
+            placeMarkToMap (coords, address, name, place, text)
+
+            document.querySelector('.review').classList.add('hide');
+
+    };
     
 
     
@@ -151,4 +170,12 @@ ymaps.ready(function () {
             return res.geoObjects.get(0);
         });
     }
+        // Обработка события, возникающего при щелчке
+    // правой кнопки мыши в любой точке карты.
+    // При возникновении такого события покажем всплывающую подсказку
+    // в точке щелчка.
+    myMap.events.add('contextmenu', function (e) {
+        myMap.hint.open(e.get('coords'), 'Кто-то щелкнул правой кнопкой');
+    });
+    
 });
