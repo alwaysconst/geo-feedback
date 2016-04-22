@@ -57,7 +57,7 @@ html, body, #map {
     font-size: 12px;
 }
 .review-rewiews {
-    height: 142px;
+    max-height: 142px;
     border-bottom: #f0f0f0 1px solid;
     overflow: scroll;
 }
@@ -83,7 +83,7 @@ html, body, #map {
     text-align: right;
     margin-bottom: 13px;
 }
-#name, #place, #text {
+#yourname, #place, #text {
     width: 324px;
     height: 8px;
     margin: 13px 0 0;
@@ -106,4 +106,7 @@ html, body, #map {
     padding: 6px 15px;
     font-size: 12px;
     outline: none;
+}
+.error {
+    border: 1px solid #ff0000 ;
 }

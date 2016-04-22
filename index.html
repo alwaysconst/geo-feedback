@@ -8,7 +8,7 @@
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no, maximum-scale=1" /> 
 <!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>-->
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
-<!--    <script src="http://yandex.st/jquery/2.1.0/jquery.min.js" type="text/javascript"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js" type="text/javascript"></script>
 </head>
 <body>
     <div id="map"></div>
@@ -25,35 +25,27 @@
         </div>
         <div class="review-rewiews">
             <ul class="review-rewiews__list" id="rewiewsList">
-                <li class="list-item">
-                    <strong>Имя</strong> Место Дата
-                    <div class="list-item__description">Описание места</div>
-                </li>
-                <li class="list-item">
-                    <strong>Имя</strong> Место Дата
-                    <div class="list-item__description">Описание места</div>
-                </li>
-                <li class="list-item">
-                    <strong>Имя</strong> Место Дата
-                    <div class="list-item__description">Описание места</div>
-                </li>
-                <li class="list-item">
-                    <strong>Имя</strong> Место Дата
-                    <div class="list-item__description">Описание места</div>
-                </li>
+            Оставьте отзыв первым
             </ul>
         </div>
         <form class="review-content">
             <span>ВАШ ОТЗЫВ</span>
-            <input type="text" id="name" name="name" placeholder="Ваше имя">
-            <input type="text" id="place" name="place" placeholder="Укажите место">
-            <textarea id="text" name="comment" placeholder="Поделитесь впечатлениями"></textarea>
+            <input type="text" id="yourname" placeholder="Ваше имя">
+            <input type="text" id="place" placeholder="Укажите место">
+            <textarea id="text" placeholder="Поделитесь впечатлениями"></textarea>
         </form>
         <div class="review-footer">
             <button id="button-save">Добавить</button>
         </div>
     </div>
-    
+    <script type="text/x-handlebars-template" id="rewiewsListTemplate">
+        {{#each list}}
+            <li class="list-item">
+                <strong>{{name}}</strong> {{place}} {{date}}
+                <div class="list-item__description">{{text}}</div>
+            </li>
+        {{#each}}
+    </script>
     <script src="js/main.js"></script>
 </body>
 </html>
