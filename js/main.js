@@ -1,6 +1,8 @@
 ymaps.ready(function () {
     var myPlacemark,
-        serverResponse,
+        allReviews,
+        coords,
+        address
         myMap = new ymaps.Map('map', {
             center: [55.755381, 37.619044],
             zoom: 12,
@@ -11,45 +13,44 @@ ymaps.ready(function () {
         });
     
     showAllPlaceMarks()
-    
+    // Получаем все отзывы и расставляем их на карте
     function showAllPlaceMarks() {
         var xhr = new XMLHttpRequest();
         xhr.responseType = 'json';
         xhr.open('post', 'http://localhost:3000/', true)
         xhr.onload = function() {
             clusterer.removeAll();
-            serverResponse = xhr.response;
             for (var address in xhr.response) {
                 var reviews = xhr.response[address];
-
                 reviews.forEach(function(review) {
                     placeMarkToMap([review.coords.x, review.coords.y], address, review.name, review.place, review.text, review.date);
                 });
-            }
-        console.log(xhr.response);
+            getAllReviews (reviews);
+            };
         };
         xhr.send(JSON.stringify({op: 'all'}));
+        
         function placeMarkToMap (coords, address, name, place, text, date) {
+            date = new Date(date);
             myPlacemark = createPlacemark(coords);
             myPlacemark.properties.set({
-                balloonContentHeader: place,
-                balloonContentBody: text,
-                balloonContentFooter: name + ' ' + date,
+                balloonContentHeader: address,
+                balloonContentBody: place + '<br>' + text,
+                balloonContentFooter:'<strong>' + name + '</strong> ' + date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear(),
             });
             clusterer.add(myPlacemark);
-        }
-        
+        };
+
         // Создаём метки
         function createPlacemark(coords) {
-            return new ymaps.Placemark(coords);
+            return new ymaps.Placemark(coords, {}, {balloonContentLayout: customItemContentLayout});
         }
     };
-
+    
     // Создаем собственный макет с информацией о выбранном геообъекте.
     customItemContentLayout = ymaps.templateLayoutFactory.createClass(
-        // Флаг "raw" означает, что данные вставляют "как есть" без экранирования html.
-        '<h2 class=ballon_header>{{ properties.balloonContentHeader|raw }}</h2>' +
-        '<div class=ballon_body>{{ properties.balloonContentBody|raw }}</div>' +
+        '<a href=# data-placemarkid="{{ geoObject.properties.placemarkId }}" class="list_item">{{ geoObject.properties.balloonContentHeader|raw }}</a>' +
+        '<h3 class=ballon_body>{{ properties.balloonContentBody|raw }}</h3>' +
         '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
     ),
 
@@ -89,15 +90,12 @@ ymaps.ready(function () {
     clusterer.add(geoObjects);
     myMap.geoObjects.add(clusterer);
 
-// Слушаем клик на карте
-    var coords = [],
-        address = ''
-    
+    // Слушаем клик на карте
     myMap.events.add('click', function (e) {
-        var clickCoords = e.get('coords');
+        var clickCoords = e.get('coords'),
             click = e.get('pagePixels'),
-            review = document.querySelector('.review'),
-            
+            address = '',
+            review = document.querySelector('.review')
             //Определяем положение попапа
             review.style.left = click[0] + 'px';
             review.style.top  = click[1] + 'px';
@@ -105,15 +103,17 @@ ymaps.ready(function () {
         
         //Получаем строку с адресом клика
         getAddress(clickCoords).then(function(gotAddress) {
-            address = gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name');
-        
+            return addressOnClick = gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name');
+        }).then(function (addressOnClick) {
+            document.querySelector('.address').innerText = addressOnClick;
             //Определяем геообъект и его центр
-            coords = ymaps.geocode(address, {
+            coords = ymaps.geocode(addressOnClick, {
                 results: 1
             }).then(function (res) {
                 var firstGeoObject = res.geoObjects.get(0);
-                return coords = firstGeoObject.geometry.getCoordinates();
+                coords = firstGeoObject.geometry.getCoordinates();
             });
+            getReviewsOnAddress (addressOnClick);
         });
         
         // Определяем адрес по координатам (обратное геокодирование)
@@ -121,21 +121,16 @@ ymaps.ready(function () {
             return ymaps.geocode(clickCoords).then(function (res) {
                 return res.geoObjects.get(0);
             });
-        }
-        
-        console.log(coords, address)
-        document.querySelector('.address').innerText = address;
-        getReviews ();
+        };
     });
     
-    function getReviews () {
-        /*--------------------ПОЛУЧАЕМ ОТВЕТ ОТ СЕРВЕРА--------------------*/
-        var reviewsOnAddres = [],
-            newAddress = address,
-
-        coords = coords.filter(function (reviews) {
-            if (newAddress) {
-                if (newAddress.indexOf(reviews.address) > -1) {
+    function getReviewsOnAddress (addressOnClick) {
+        var reviewsOnAddres = [];
+        address = addressOnClick; 
+        // Проверяем, есть ли отзывы по данному адресу
+        allReviews.forEach(function (reviews) {
+            if (addressOnClick) {
+                if (addressOnClick.indexOf(reviews.address) > -1) {
                     reviewsOnAddres.push(reviews);
                     return false; 
                 }   
@@ -143,12 +138,21 @@ ymaps.ready(function () {
             return true;
         });
 
-        /*--------------------ВСТАВЛЯЕМ ДАННЫЕ В ШАБЛОН ОТЗЫВА--------------------*/
+        // Вставляем данные в шаблон отзыва
         var rewiews = rewiewsListTemplate.innerHTML,
             templateFn = Handlebars.compile(rewiews),
             template = templateFn({list: reviewsOnAddres});
-        rewiewsList.innerHTML = template;
-    }
+        console.log(reviewsOnAddres)
+        if (!reviewsOnAddres[0]) {
+            rewiewsList.innerHTML = 'Оставьте отзыв первым';
+        } else {
+            rewiewsList.innerHTML = template;
+        }
+    };
+    
+    function getAllReviews (reviews) {
+        allReviews = reviews;
+    };
     
     document.getElementById('button-save').addEventListener('click', function (){
         yourname = document.getElementById('yourname'),
@@ -172,7 +176,6 @@ ymaps.ready(function () {
         } else {
             text.style.border = '1px solid #c4c4c4'
         };
-        
         if ( yourname.value !== '' && place.value !== '' && text.value !== '') {
             var xhr = new XMLHttpRequest();
             xhr.open('post', 'http://localhost:3000/', true)
