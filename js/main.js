@@ -142,7 +142,6 @@ ymaps.ready(function () {
                 if (addressOnClick.indexOf(reviews.address) > -1) {
                     reviewsDate = new Date(reviews.date);
                     reviews.date = reviewsDate.getDate() + '.' + (reviewsDate.getMonth() + 1) + '.' + reviewsDate.getFullYear() + ' ' + reviewsDate.getHours() + ':' + reviewsDate.getMinutes();
-                    console.log(reviews.date)
                     reviewsOnAddres.push(reviews);
                     return false; 
                 }   
