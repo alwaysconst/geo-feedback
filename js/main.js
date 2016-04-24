@@ -1,8 +1,8 @@
 ymaps.ready(function () {
     var myPlacemark,
-        allReviews,
-        coords,
-        address
+        allReviews = [],
+        addressOnClick = '',
+        coords
         myMap = new ymaps.Map('map', {
             center: [55.755381, 37.619044],
             zoom: 12,
@@ -20,41 +20,49 @@ ymaps.ready(function () {
         xhr.open('post', 'http://localhost:3000/', true)
         xhr.onload = function() {
             clusterer.removeAll();
+            allReviews = [];
             for (var address in xhr.response) {
                 var reviews = xhr.response[address];
                 reviews.forEach(function(review) {
                     placeMarkToMap([review.coords.x, review.coords.y], address, review.name, review.place, review.text, review.date);
+                    allReviews.push(review);
                 });
-            getAllReviews (reviews);
             };
+            getReviewsOnAddress(addressOnClick);
         };
         xhr.send(JSON.stringify({op: 'all'}));
         
+        
         function placeMarkToMap (coords, address, name, place, text, date) {
             date = new Date(date);
-            myPlacemark = createPlacemark(coords);
+            myPlacemark = createPlacemark(coords);            
             myPlacemark.properties.set({
                 balloonContentHeader: address,
                 balloonContentBody: place + '<br>' + text,
-                balloonContentFooter:'<strong>' + name + '</strong> ' + date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear(),
+                balloonContentFooter:'<strong>' + name + '</strong> ' + date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear() + ' ' + date.getHours() + ':' + date.getMinutes(),
             });
             clusterer.add(myPlacemark);
         };
 
         // Создаём метки
         function createPlacemark(coords) {
-            return new ymaps.Placemark(coords, {}, {balloonContentLayout: customItemContentLayout});
+            return new ymaps.Placemark(coords, {}, {
+                preset: 'islands#redDotIcon',
+                balloonContentLayout: customItemContentLayout
+            });
         }
+        return
     };
     
     // Создаем собственный макет с информацией о выбранном геообъекте.
     customItemContentLayout = ymaps.templateLayoutFactory.createClass(
-        '<a href=# data-placemarkid="{{ geoObject.properties.placemarkId }}" class="list_item">{{ geoObject.properties.balloonContentHeader|raw }}</a>' +
+        '<div class="list_item">{{ geoObject.properties.balloonContentHeader|raw }}</div>' +
         '<h3 class=ballon_body>{{ properties.balloonContentBody|raw }}</h3>' +
         '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
     ),
 
     clusterer = new ymaps.Clusterer({
+        preset: 'islands#invertedRedClusterIcons',
         clusterDisableClickZoom: true,
         clusterOpenBalloonOnClick: true,
         clusterBalloonContentLayout: 'cluster#balloonCarousel',
@@ -69,17 +77,12 @@ ymaps.ready(function () {
         return document.querySelector('.review').classList.remove('hide') && document.querySelector('.review').outerHTML
     },
 
-        getPointOptions = function () {
-        return {
-            preset: 'islands#violetIcon'
-        };
-    },
     points = [],
 
     geoObjects = [];
 
     for(var i = 0, len = points.length; i < len; i++) {
-        geoObjects[i] = new ymaps.Placemark(points[i], getPointData(i), getPointOptions());
+        geoObjects[i] = new ymaps.Placemark(points[i], getPointData(i));
     }
 
     clusterer.options.set({
@@ -92,13 +95,20 @@ ymaps.ready(function () {
 
     // Слушаем клик на карте
     myMap.events.add('click', function (e) {
-        var clickCoords = e.get('coords'),
-            click = e.get('pagePixels'),
-            address = '',
+        if (!myMap.balloon.isOpen()) {
+            var clickCoords = e.get('coords')
+            clickOnMap(clickCoords);
+        }
+        else {
+            myMap.balloon.close();
+        }
+    });
+    
+    function clickOnMap (clickCoords) {
             review = document.querySelector('.review')
             //Определяем положение попапа
-            review.style.left = click[0] + 'px';
-            review.style.top  = click[1] + 'px';
+            review.style.left = '60px';
+            review.style.top  = '60px';
             review.classList.remove('hide');
         
         //Получаем строку с адресом клика
@@ -122,15 +132,17 @@ ymaps.ready(function () {
                 return res.geoObjects.get(0);
             });
         };
-    });
+    };
     
     function getReviewsOnAddress (addressOnClick) {
         var reviewsOnAddres = [];
-        address = addressOnClick; 
         // Проверяем, есть ли отзывы по данному адресу
         allReviews.forEach(function (reviews) {
             if (addressOnClick) {
                 if (addressOnClick.indexOf(reviews.address) > -1) {
+                    reviewsDate = new Date(reviews.date);
+                    reviews.date = reviewsDate.getDate() + '.' + (reviewsDate.getMonth() + 1) + '.' + reviewsDate.getFullYear() + ' ' + reviewsDate.getHours() + ':' + reviewsDate.getMinutes();
+                    console.log(reviews.date)
                     reviewsOnAddres.push(reviews);
                     return false; 
                 }   
@@ -142,16 +154,11 @@ ymaps.ready(function () {
         var rewiews = rewiewsListTemplate.innerHTML,
             templateFn = Handlebars.compile(rewiews),
             template = templateFn({list: reviewsOnAddres});
-        console.log(reviewsOnAddres)
         if (!reviewsOnAddres[0]) {
             rewiewsList.innerHTML = 'Оставьте отзыв первым';
         } else {
             rewiewsList.innerHTML = template;
         }
-    };
-    
-    function getAllReviews (reviews) {
-        allReviews = reviews;
     };
     
     document.getElementById('button-save').addEventListener('click', function (){
@@ -186,25 +193,24 @@ ymaps.ready(function () {
                     x: coords[0],
                     y: coords[1]
                 },
-                address: address,
+                address: addressOnClick,
                 name: yourname.value,
                 place: place.value,
                 text: text.value,
             }
             }))
-            
+            showAllPlaceMarks();
             clearInuts();
-            showAllPlaceMarks ();  
         };
     });
 
     document.querySelector('.close').addEventListener('click', function (){
         clearInuts();
+        document.querySelector('.review').classList.add('hide');
     });
     
     // Очищаем форму при закрытии
     function clearInuts() {
-        document.querySelector('.review').classList.add('hide');
         yourname.value = '';
         yourname.style.border = '1px solid #c4c4c4';
         place.value = '';
