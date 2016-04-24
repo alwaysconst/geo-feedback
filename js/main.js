@@ -17,7 +17,7 @@ ymaps.ready(function () {
     function showAllPlaceMarks() {
         var xhr = new XMLHttpRequest();
         xhr.responseType = 'json';
-        xhr.open('post', 'http://localhost:3000/', true)
+        xhr.open('post', 'http://smelukov.com:3000/', true)
         xhr.onload = function() {
             clusterer.removeAll();
             allReviews = [];
@@ -113,7 +113,7 @@ ymaps.ready(function () {
         
         //Получаем строку с адресом клика
         getAddress(clickCoords).then(function(gotAddress) {
-            return addressOnClick = gotAddress.properties.get('description').split(', ').pop() + ',' + ' ' + gotAddress.properties.get('name');
+            return addressOnClick = gotAddress.properties.get('description') + ',' + ' ' + gotAddress.properties.get('name');
         }).then(function (addressOnClick) {
             document.querySelector('.address').innerText = addressOnClick;
             //Определяем геообъект и его центр
@@ -185,7 +185,7 @@ ymaps.ready(function () {
         };
         if ( yourname.value !== '' && place.value !== '' && text.value !== '') {
             var xhr = new XMLHttpRequest();
-            xhr.open('post', 'http://localhost:3000/', true)
+            xhr.open('post', 'http://smelukov.com:3000/', true)
             xhr.send(JSON.stringify({
             op: 'add',
             review: {
