@@ -1,8 +1,12 @@
 ymaps.ready(function () {
     var myPlacemark,
+        geoObjects = [],
         allReviews = [],
         addressOnClick = '',
-        coords
+        coords,
+        method = 'post',
+        host = 'http://smelukov.com:3000/';
+
         myMap = new ymaps.Map('map', {
             center: [55.755381, 37.619044],
             zoom: 12,
@@ -11,55 +15,52 @@ ymaps.ready(function () {
         }, {
             searchControlProvider: 'yandex#search'
         });
-    
-    showAllPlaceMarks()
+
+    showAllPlaceMarks();
     // Получаем все отзывы и расставляем их на карте
     function showAllPlaceMarks() {
         var xhr = new XMLHttpRequest();
         xhr.responseType = 'json';
-        xhr.open('post', 'http://smelukov.com:3000/', true)
+        xhr.open(method, host, true);
         xhr.onload = function() {
             clusterer.removeAll();
-            allReviews = [];
             for (var address in xhr.response) {
                 var reviews = xhr.response[address];
                 reviews.forEach(function(review) {
                     placeMarkToMap([review.coords.x, review.coords.y], address, review.name, review.place, review.text, review.date);
                     allReviews.push(review);
                 });
-            };
+            }
             getReviewsOnAddress(addressOnClick);
         };
         xhr.send(JSON.stringify({op: 'all'}));
-        
-        
-        function placeMarkToMap (coords, address, name, place, text, date) {
-            date = new Date(date);
-            myPlacemark = createPlacemark(coords);            
-            myPlacemark.properties.set({
-                balloonContentHeader: address,
-                balloonContentBody: place + '<br>' + text,
-                balloonContentFooter:'<strong>' + name + '</strong> ' + date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear() + ' ' + date.getHours() + ':' + date.getMinutes(),
-            });
-            clusterer.add(myPlacemark);
-        };
+    }
 
-        // Создаём метки
-        function createPlacemark(coords) {
-            return new ymaps.Placemark(coords, {}, {
-                preset: 'islands#redDotIcon',
-                balloonContentLayout: customItemContentLayout
-            });
-        }
-        return
-    };
-    
+    function placeMarkToMap (coords, address, name, place, text, date) {
+        date = new Date(date);
+        myPlacemark = createPlacemark(coords);
+        myPlacemark.properties.set({
+            balloonContentHeader: '<a href="" id="feedback" data-x="' + coords[0] + '" data-y="' + coords[1] + '">' + address + '</a>',
+            balloonContentBody: place + '<br>' + text,
+            balloonContentFooter:'<strong>' + name + '</strong>' + date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear() + ' ' + date.getHours() + ':' + date.getMinutes(),
+        });
+        clusterer.add(myPlacemark);
+    }
+
+    // Создаём метки
+    function createPlacemark(coords) {
+        return new ymaps.Placemark(coords, {}, {
+            preset: 'islands#redDotIcon',
+            balloonContentLayout: customItemContentLayout
+        });
+    }
+
     // Создаем собственный макет с информацией о выбранном геообъекте.
     customItemContentLayout = ymaps.templateLayoutFactory.createClass(
         '<div class="list_item">{{ geoObject.properties.balloonContentHeader|raw }}</div>' +
         '<h3 class=ballon_body>{{ properties.balloonContentBody|raw }}</h3>' +
         '<div class=ballon_footer>{{ properties.balloonContentFooter|raw }}</div>'
-    ),
+    );
 
     clusterer = new ymaps.Clusterer({
         preset: 'islands#invertedRedClusterIcons',
@@ -71,18 +72,17 @@ ymaps.ready(function () {
         clusterBalloonContentLayoutWidth: 200,
         clusterBalloonContentLayoutHeight: 130,
         clusterBalloonPagerSize: 5
-    }),
+    });
 
-        getPointData = function (index) {
-        return document.querySelector('.review').classList.remove('hide') && document.querySelector('.review').outerHTML
-    },
+    getPointData = function (index) {
+        return document.querySelector('.review').classList.toggle('hide') && document.querySelector('.review').outerHTML
+    };
 
-    points = [],
+    // points = [];
 
-    geoObjects = [];
 
-    for(var i = 0, len = points.length; i < len; i++) {
-        geoObjects[i] = new ymaps.Placemark(points[i], getPointData(i));
+    for(var i = 0, len = allReviews.length; i < len; i++) {
+        geoObjects[i] = new ymaps.Placemark(allReviews[i], getPointData(i));
     }
 
     clusterer.options.set({
@@ -95,22 +95,45 @@ ymaps.ready(function () {
 
     // Слушаем клик на карте
     myMap.events.add('click', function (e) {
+        var clickCoords = e.get('coords');
         if (!myMap.balloon.isOpen()) {
-            var clickCoords = e.get('coords')
+            clickOnMap(clickCoords);
+        } else {
+            myMap.balloon.close();
             clickOnMap(clickCoords);
         }
-        else {
+    });
+
+    document.addEventListener('click', function(e) {
+        e.preventDefault();
+        if(e.target === 'YMAPS') {
+            review.classList.add('hide');
+        }
+        if(e.target.id === 'feedback') {
+            var click = e.target;
+            clickOnMap(click.getAttribute("data-x") + ' ' + click.getAttribute("data-y"));
             myMap.balloon.close();
         }
     });
     
     function clickOnMap (clickCoords) {
-            review = document.querySelector('.review')
-            //Определяем положение попапа
-            review.style.left = '60px';
-            review.style.top  = '60px';
-            review.classList.remove('hide');
-        
+        var review = document.querySelector('.review'),
+        //Определяем положение попапа
+            x = event.pageX + 380,
+            y = event.pageY + 578;
+
+        if (x > window.innerWidth) {
+            review.style.left = ( x - (x - window.innerWidth) ) - 400 + 'px';
+        } else {
+            review.style.left = event.pageX + 'px'
+        }
+        if (y > window.innerHeight) {
+            review.style.top = ( y - (y - window.innerHeight) ) - 570 + 'px';
+        } else {
+            review.style.top = event.pageY + 'px'
+        }
+        review.classList.remove('hide');
+
         //Получаем строку с адресом клика
         getAddress(clickCoords).then(function(gotAddress) {
             return addressOnClick = gotAddress.properties.get('description') + ',' + ' ' + gotAddress.properties.get('name');
@@ -131,8 +154,8 @@ ymaps.ready(function () {
             return ymaps.geocode(clickCoords).then(function (res) {
                 return res.geoObjects.get(0);
             });
-        };
-    };
+        }
+    }
     
     function getReviewsOnAddress (addressOnClick) {
         var reviewsOnAddres = [];
@@ -158,33 +181,34 @@ ymaps.ready(function () {
         } else {
             rewiewsList.innerHTML = template;
         }
-    };
+    }
     
     document.getElementById('button-save').addEventListener('click', function (){
-        yourname = document.getElementById('yourname'),
-        place = document.getElementById('place'),
-        text = document.getElementById('text')
+        yourname = document.getElementById('yourname');
+        place = document.getElementById('place');
+        text = document.getElementById('text');
         
         if ( yourname.value === '' ) {
             yourname.style.border = '1px solid #ff0000'
         } else {
             yourname.style.border = '1px solid #c4c4c4'
-        };
+        }
         
         if ( place.value === '' ) {
             place.style.border = '1px solid #ff0000'
         } else {
             place.style.border = '1px solid #c4c4c4'
-        };
+        }
         
         if ( text.value === '' ) {
             text.style.border = '1px solid #ff0000'
         } else {
             text.style.border = '1px solid #c4c4c4'
-        };
+        }
+
         if ( yourname.value !== '' && place.value !== '' && text.value !== '') {
             var xhr = new XMLHttpRequest();
-            xhr.open('post', 'http://smelukov.com:3000/', true)
+            xhr.open(method, host, true);
             xhr.send(JSON.stringify({
             op: 'add',
             review: {
@@ -195,17 +219,17 @@ ymaps.ready(function () {
                 address: addressOnClick,
                 name: yourname.value,
                 place: place.value,
-                text: text.value,
+                text: text.value
             }
-            }))
+            }));
             showAllPlaceMarks();
             clearInuts();
-        };
+        }
     });
 
     document.querySelector('.close').addEventListener('click', function (){
         clearInuts();
-        document.querySelector('.review').classList.add('hide');
+        document.querySelector('.review').classList.toggle('hide');
     });
     
     // Очищаем форму при закрытии
@@ -217,7 +241,4 @@ ymaps.ready(function () {
         text.value = '';
         text.style.border = '1px solid #c4c4c4';
     }
-    
-
-
 });
