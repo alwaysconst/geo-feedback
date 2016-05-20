@@ -110,5 +110,5 @@ html, body, #map {
     outline: none;
 }
 .error {
-    border: 1px solid #ff0000 ;
+    border: 1px solid #ff0000 !important;
 }

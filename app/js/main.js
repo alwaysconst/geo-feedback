@@ -7,14 +7,29 @@ ymaps.ready(function () {
         method = 'post',
         host = 'http://smelukov.com:3000/';
 
-        myMap = new ymaps.Map('map', {
-            center: [55.755381, 37.619044],
-            zoom: 12,
-            behaviors: ['default', 'scrollZoom'],
-            controls: ['smallMapDefaultSet']
-        }, {
-            searchControlProvider: 'yandex#search'
-        });
+    myMap = new ymaps.Map('map', {
+        center: [55.755381, 37.619044],
+        zoom: 12,
+        behaviors: ['default', 'scrollZoom'],
+        controls: ['smallMapDefaultSet']
+    }, {
+        searchControlProvider: 'yandex#search'
+    });
+
+    document.addEventListener('click', function (e){
+        e.preventDefault();
+        switch (e.target.id) {
+            case 'feedback':
+                clickOnMap(e.target.getAttribute("data-x") + ' ' + e.target.getAttribute("data-y"));
+                break;
+            case 'button-save':
+                sendButton ();
+                break;
+            case 'close':
+                closeButton ();
+                break;
+        }
+    });
 
     getAllPlaceMarks();
 
@@ -42,7 +57,7 @@ ymaps.ready(function () {
         myPlacemark.properties.set({
             balloonContentHeader: '<a href="" id="feedback" data-x="' + coords[0] + '" data-y="' + coords[1] + '">' + address + '</a>',
             balloonContentBody: place + '<br>' + text,
-            balloonContentFooter:'<strong>' + name + '</strong>' + time(date)
+            balloonContentFooter:'<strong>' + name + '</strong> ' + time(date)
         });
         clusterer.add(myPlacemark);
     }
@@ -72,14 +87,6 @@ ymaps.ready(function () {
         clusterBalloonPagerSize: 5
     });
 
-    getPointData = function (index) {
-        return document.querySelector('.review').classList.toggle('hide') && document.querySelector('.review').outerHTML
-    };
-
-    for(var i = 0, len = allReviews.length; i < len; i++) {
-        geoObjects[i] = new ymaps.Placemark(allReviews[i], getPointData(i));
-    }
-
     clusterer.options.set({
         gridSize: 80,
         clusterDisableClickZoom: true
@@ -100,6 +107,7 @@ ymaps.ready(function () {
 
     
     function clickOnMap (clickCoords) {
+        myMap.balloon.close();
         var review = document.querySelector('.review'),
             x = event.pageX + 380,
             y = event.pageY + 578;
@@ -123,107 +131,87 @@ ymaps.ready(function () {
 
             getReviewsOnAddress (addressOnClick);
         });
-
-        function getAddress(clickCoords) {
-            return ymaps.geocode(clickCoords, {results: 1}).then(function (res) {
-                return res.geoObjects.get(0);
-            });
-        }
     }
-    
+
+    function getAddress(clickCoords) {
+        return ymaps.geocode(clickCoords, {results: 1}).then(function (res) {
+            return res.geoObjects.get(0);
+        });
+    }
+
     function getReviewsOnAddress (addressOnClick) {
         var reviewsOnAddres = [];
-        allReviews.forEach(function (review) {
-            if (addressOnClick.indexOf(review.address) > -1) {
-                console.log(review.date);
-                review.date = time(review.date);
-                reviewsOnAddres.push(review);
+
+        allReviews.forEach(function (item) {
+            if (addressOnClick.indexOf(item.address) > -1) {
+                if (!isNaN(item.date)) {
+                    item.date = time(item.date);
+                }
+                reviewsOnAddres.push(item);
             }
         });
 
-        // Вставляем данные в шаблон отзыва
+        reviewsOnAddres.reverse();
 
-        var rewiews = rewiewsListTemplate.innerHTML,
-            templateFn = Handlebars.compile(rewiews),
+        rewiewsList.innerHTML = '';
+
+        var source = rewiewsListTemplate.innerHTML,
+            templateFn = Handlebars.compile(source),
             template = templateFn({list: reviewsOnAddres});
         if (!reviewsOnAddres[0]) {
             rewiewsList.innerHTML = 'Оставьте отзыв первым';
         } else {
-            rewiewsList.innerHTML = template;
+            rewiewsList.insertAdjacentHTML("afterBegin", template);
+            reviewsOnAddres = [];
         }
     }
-    
-    document.addEventListener('click', function (e){
-        e.preventDefault();
-        if(e.target.id === 'feedback') {
-            var click = e.target;
-            clickOnMap(click.getAttribute("data-x") + ' ' + click.getAttribute("data-y"));
-            myMap.balloon.close();
-        }
 
-        if (e.target.id === "button-save") {
-            var yourname = document.getElementById('yourname'),
-                place = document.getElementById('place'),
-                text = document.getElementById('text');
-
-            if ( yourname.value === '' ) {
-                yourname.style.border = '1px solid #ff0000'
-            } else {
-                yourname.style.border = '1px solid #c4c4c4'
-            }
-
-            if ( place.value === '' ) {
-                place.style.border = '1px solid #ff0000'
-            } else {
-                place.style.border = '1px solid #c4c4c4'
-            }
-
-            if ( text.value === '' ) {
-                text.style.border = '1px solid #ff0000'
-            } else {
-                text.style.border = '1px solid #c4c4c4'
-            }
-
-            if ( yourname.value && place.value && text.value) {
-                console.log(coords[0], coords[1], addressOnClick);
-                var xhr = new XMLHttpRequest();
-                xhr.open(method, host, true);
-                xhr.send(JSON.stringify({
-                    op: 'add',
-                    review: {
-                        coords: {
-                            x: coords[0],
-                            y: coords[1]
-                        },
-                        address: addressOnClick,
-                        name: yourname.value,
-                        place: place.value,
-                        text: text.value
-                    }
-                }));
-                getAllPlaceMarks();
-                clearInuts();
-            }
-        }
-    });
-
-    document.querySelector('.close').addEventListener('click', function (){
-        clearInuts();
+    function closeButton () {
         document.querySelector('.review').classList.toggle('hide');
-    });
+        clearInuts();
+    }
+    
+    function sendButton () {
+        var yourname = document.getElementById('yourname'),
+            place = document.getElementById('place'),
+            text = document.getElementById('text');
+
+        (!yourname.value) ? yourname.classList.add('error') : yourname.classList.remove('error');
+        (!place.value) ? place.classList.add('error') : place.classList.remove('error');
+        (!text.value) ? text.classList.add('error') : text.classList.remove('error');
+
+        if ( yourname.value && place.value && text.value) {
+            var xhr = new XMLHttpRequest();
+            xhr.open(method, host, true);
+            xhr.send(JSON.stringify({
+                op: 'add',
+                review: {
+                    coords: {
+                        x: coords[0],
+                        y: coords[1]
+                    },
+                    address: addressOnClick,
+                    name: yourname.value,
+                    place: place.value,
+                    text: text.value
+                }
+            }));
+            clearInuts();
+            getAllPlaceMarks();
+        }
+    }
 
     function time(date){
         date = new Date(date);
         return date.getDate() + '.' + (date.getMonth() + 1) + '.' + date.getFullYear() + ' ' + date.getHours() + ':' + date.getMinutes();
     }
 
-    // Очищаем форму при закрытии
     function clearInuts() {
         yourname.value = '';
-        yourname.style.border = '1px solid #c4c4c4';
+        yourname.classList.remove('error');
         place.value = '';
-        place.style.border = '1px solid #c4c4c4';
+        place.classList.remove('error');
         text.value = '';
-        text.style.border = '1px solid #c4c4c4';
+        text.classList.remove('error');
     }
 });
