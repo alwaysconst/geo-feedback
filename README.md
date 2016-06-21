@@ -6,7 +6,7 @@ A small project the essence of which - leave feedback on the city map of places 
 
 You can download it by typing the console command:
 ```
-git clone https://github.com/most-effect/friendfilter.git friendfilter && cd friendfilter
+git clone https://github.com/most-effect/geo-feedback.git geo-feedback && cd geo-feedback
 ```
 Languages / technologies that have been used:
 * Vanilla JS (ES5)
