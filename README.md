@@ -13,7 +13,7 @@ Languages / technologies that have been used:
 * JavaScript API Yandex.Maps
 * Handlebars.JS
 
-The "app" folder contains a front-end part of the project written by me
+The "app" folder contains a front-end part of the project written by me<br>
 The "server" folder is back-end part of the project is not written by me
 
 ***
